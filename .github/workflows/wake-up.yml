@@ -1,4 +1,4 @@
-name: Wake Render on cron-job.org Failure
+name: Wake Up
 
 on:
   repository_dispatch:
