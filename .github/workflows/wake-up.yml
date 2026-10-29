@@ -71,7 +71,7 @@ jobs:
                 {"name": "Triggered by", "value": "cron-job.org failure webhook", "inline": true},
                 {"name": "Workflow run", "value": "[View logs](%s)", "inline": true}
               ],
-              "footer": {"text": "render-waker · GitHub Actions"}
+              "footer": {"text": "Wake-Up · GitHub Actions"}
             }]
           }' "$TITLE" "$DESCRIPTION" "$COLOR" "$RUN_URL")
 
