@@ -14,7 +14,7 @@ jobs:
       - name: Wake Render service (hold connection open until 200)
         id: wake
         env:
-          RENDER_URL: ${{ vars.RENDER_URL }}
+          RENDER_URL: ${{ secrets.RENDER_URL }}
         run: |
           echo "Connecting to: $RENDER_URL"
           echo "Holding connection open — Render will respond once the container is ready (up to 120s)..."
@@ -44,8 +44,8 @@ jobs:
 
       - name: Send Discord notification
         env:
-          DISCORD_WEBHOOK: ${{ vars.DISCORD_WEBHOOK }}
-          RENDER_URL: ${{ vars.RENDER_URL }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          RENDER_URL: ${{ secrets.RENDER_URL }}
         run: |
           SUCCESS="${{ steps.wake.outputs.success }}"
           ELAPSED="${{ steps.wake.outputs.elapsed }}"
