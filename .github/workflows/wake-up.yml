@@ -3,6 +3,7 @@ name: Wake Up
 on:
   repository_dispatch:
     types: [cronjob-failed]
+  workflow_dispatch:
 
 jobs:
   wake-render:
