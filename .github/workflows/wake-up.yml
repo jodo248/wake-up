@@ -1,0 +1,86 @@
+name: Wake Render on cron-job.org Failure
+
+on:
+  repository_dispatch:
+    types: [cronjob-failed]
+
+jobs:
+  wake-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Wake Render service (hold connection open until 200)
+        id: wake
+        env:
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          echo "Connecting to: $RENDER_URL"
+          echo "Holding connection open — Render will respond once the container is ready (up to 120s)..."
+
+          START=$(date +%s)
+
+          # Single persistent request; Render holds it open while spinning up,
+          # then responds with 200 once your app is listening — just like a browser.
+          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+            --max-time 120 \
+            "$RENDER_URL" || echo "000")
+
+          END=$(date +%s)
+          ELAPSED=$(( END - START ))
+
+          echo "HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            SUCCESS=true
+          else
+            SUCCESS=false
+          fi
+
+          echo "success=$SUCCESS"     >> "$GITHUB_OUTPUT"
+          echo "elapsed=$ELAPSED"     >> "$GITHUB_OUTPUT"
+          echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ vars.DISCORD_WEBHOOK }}
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          SUCCESS="${{ steps.wake.outputs.success }}"
+          ELAPSED="${{ steps.wake.outputs.elapsed }}"
+          HTTP_STATUS="${{ steps.wake.outputs.http_status }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "$SUCCESS" = "true" ]; then
+            COLOR=3066993   # green
+            TITLE="✅ Render service is back online"
+            DESCRIPTION="**$RENDER_URL** woke up successfully after ${ELAPSED}s (HTTP $HTTP_STATUS)."
+          else
+            COLOR=15158332  # red
+            TITLE="❌ Failed to wake Render service"
+            DESCRIPTION="**$RENDER_URL** did not return HTTP 200 within 120 seconds (last status: HTTP $HTTP_STATUS)."
+          fi
+
+          PAYLOAD=$(printf '{
+            "embeds": [{
+              "title": "%s",
+              "description": "%s",
+              "color": %s,
+              "fields": [
+                {"name": "Triggered by", "value": "cron-job.org failure webhook", "inline": true},
+                {"name": "Workflow run", "value": "[View logs](%s)", "inline": true}
+              ],
+              "footer": {"text": "render-waker · GitHub Actions"}
+            }]
+          }' "$TITLE" "$DESCRIPTION" "$COLOR" "$RUN_URL")
+
+          HTTP_RESP=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK")
+
+          echo "Discord webhook response: $HTTP_RESP"
+
+          if [ "$HTTP_RESP" != "204" ]; then
+            echo "Warning: Discord webhook returned $HTTP_RESP (expected 204)"
+          fi
