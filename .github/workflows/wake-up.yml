@@ -54,12 +54,12 @@ jobs:
 
           if [ "$SUCCESS" = "true" ]; then
             COLOR=3066993   # green
-            TITLE="✅ Render service is back online"
-            DESCRIPTION="**$RENDER_URL** woke up successfully after ${ELAPSED}s (HTTP $HTTP_STATUS)."
+            TITLE="✅ Render is back online"
+            DESCRIPTION="**$RENDER_URL** woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           else
             COLOR=15158332  # red
-            TITLE="❌ Failed to wake Render service"
-            DESCRIPTION="**$RENDER_URL** did not return HTTP 200 within 120 seconds (last status: HTTP $HTTP_STATUS)."
+            TITLE="❌ Failed to wake Render"
+            DESCRIPTION="**$RENDER_URL** timed out after 120 seconds (HTTP $HTTP_STATUS)."
           fi
 
           PAYLOAD=$(printf '{
@@ -68,7 +68,7 @@ jobs:
               "description": "%s",
               "color": %s,
               "fields": [
-                {"name": "Triggered by", "value": "cron-job.org failure webhook", "inline": true},
+                {"name": "Triggered by", "value": "Cron-Job.org", "inline": true},
                 {"name": "Workflow run", "value": "[View logs](%s)", "inline": true}
               ],
               "footer": {"text": "Wake-Up · GitHub Actions"}
