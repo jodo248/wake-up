@@ -41,9 +41,9 @@ jobs:
               'unsplash\.com|#000000|1920[[:space:]]*/[[:space:]]*1080|class="hero"|object-fit:[[:space:]]*cover|photo-1506905925346' \
               /tmp/render_response.html 2>/dev/null; then
               CONTENT_MATCH=true
-              echo "Content check: PASSED — expected page markers found"
+              echo "Content check: ✅ PASSED — expected page markers found"
             else
-              echo "Content check: FAILED — no expected markers found in response body"
+              echo "Content check: ⛔ FAILED — no expected markers found in response body"
               echo "--- Response body (first 40 lines) ---"
               head -40 /tmp/render_response.html || true
             fi
@@ -77,8 +77,8 @@ jobs:
             DESCRIPTION="**$RENDER_URL** Woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           elif [ "$HTTP_STATUS" = "200" ] && [ "$CONTENT_MATCH" = "false" ]; then
             COLOR=16776960  # yellow
-            TITLE="⚠️ Render responded but page content mismatch"
-            DESCRIPTION="**$RENDER_URL** returned HTTP $HTTP_STATUS after ${ELAPSED}s but the expected page markers were not found in the response body."
+            TITLE="⚠️ HTML mismatch"
+            DESCRIPTION="**$RENDER_URL** Woke up after ${ELAPSED} seconds but wrong HTML (HTTP $HTTP_STATUS)."
           else
             COLOR=15158332  # red
             TITLE="⛔ Failed to wake Render"
