@@ -23,7 +23,7 @@ jobs:
 
           # Single persistent request; Render holds it open while spinning up,
           # then responds with 200 once your app is listening — just like a browser.
-          HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+          HTTP_STATUS=$(curl -o /tmp/render_response.html -s -w "%{http_code}" \
             --max-time 240 \
             "$RENDER_URL" || echo "000")
 
@@ -32,15 +32,33 @@ jobs:
 
           echo "HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
 
+          CONTENT_MATCH=false
           if [ "$HTTP_STATUS" = "200" ]; then
+            # Check response body for expected page markers (any one match is enough).
+            # Markers: Unsplash image URL · black background · aspect-ratio · hero class ·
+            #          object-fit: cover · specific photo ID
+            if grep -qE \
+              'unsplash\.com|#000000|1920[[:space:]]*/[[:space:]]*1080|class="hero"|object-fit:[[:space:]]*cover|photo-1506905925346' \
+              /tmp/render_response.html 2>/dev/null; then
+              CONTENT_MATCH=true
+              echo "Content check: PASSED — expected page markers found"
+            else
+              echo "Content check: FAILED — no expected markers found in response body"
+              echo "--- Response body (first 40 lines) ---"
+              head -40 /tmp/render_response.html || true
+            fi
+          fi
+
+          if [ "$HTTP_STATUS" = "200" ] && [ "$CONTENT_MATCH" = "true" ]; then
             SUCCESS=true
           else
             SUCCESS=false
           fi
 
-          echo "success=$SUCCESS"     >> "$GITHUB_OUTPUT"
-          echo "elapsed=$ELAPSED"     >> "$GITHUB_OUTPUT"
-          echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+          echo "success=$SUCCESS"             >> "$GITHUB_OUTPUT"
+          echo "elapsed=$ELAPSED"             >> "$GITHUB_OUTPUT"
+          echo "http_status=$HTTP_STATUS"     >> "$GITHUB_OUTPUT"
+          echo "content_match=$CONTENT_MATCH" >> "$GITHUB_OUTPUT"
 
       - name: Send Discord notification
         env:
@@ -50,12 +68,17 @@ jobs:
           SUCCESS="${{ steps.wake.outputs.success }}"
           ELAPSED="${{ steps.wake.outputs.elapsed }}"
           HTTP_STATUS="${{ steps.wake.outputs.http_status }}"
+          CONTENT_MATCH="${{ steps.wake.outputs.content_match }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           if [ "$SUCCESS" = "true" ]; then
             COLOR=3066993   # green
             TITLE="✅ Render is back online"
             DESCRIPTION="**$RENDER_URL** Woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
+          elif [ "$HTTP_STATUS" = "200" ] && [ "$CONTENT_MATCH" = "false" ]; then
+            COLOR=16776960  # yellow
+            TITLE="⚠️ Render responded but page content mismatch"
+            DESCRIPTION="**$RENDER_URL** returned HTTP $HTTP_STATUS after ${ELAPSED}s but the expected page markers were not found in the response body."
           else
             COLOR=15158332  # red
             TITLE="⛔ Failed to wake Render"
