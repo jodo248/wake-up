@@ -8,23 +8,23 @@ on:
 jobs:
   wake-render:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-      - name: Wake Render service (hold connection open until 200)
+      - name: Wake Render service (hold connection open until HTTP 200)
         id: wake
         env:
           RENDER_URL: ${{ secrets.RENDER_URL }}
         run: |
           echo "Connecting to: $RENDER_URL"
-          echo "Holding connection open — Render will respond once the container is ready (up to 120s)..."
+          echo "Holding connection open — Render will respond once the container is ready (max. 240 seconds)..."
 
           START=$(date +%s)
 
           # Single persistent request; Render holds it open while spinning up,
           # then responds with 200 once your app is listening — just like a browser.
           HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
-            --max-time 120 \
+            --max-time 240 \
             "$RENDER_URL" || echo "000")
 
           END=$(date +%s)
@@ -58,8 +58,8 @@ jobs:
             DESCRIPTION="**$RENDER_URL** woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           else
             COLOR=15158332  # red
-            TITLE="❌ Failed to wake Render"
-            DESCRIPTION="**$RENDER_URL** timed out after 120 seconds (HTTP $HTTP_STATUS)."
+            TITLE="⛔ Failed to wake Render"
+            DESCRIPTION="**$RENDER_URL** timed out after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           fi
 
           PAYLOAD=$(printf '{
