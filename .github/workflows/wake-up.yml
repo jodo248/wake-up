@@ -55,11 +55,11 @@ jobs:
           if [ "$SUCCESS" = "true" ]; then
             COLOR=3066993   # green
             TITLE="✅ Render is back online"
-            DESCRIPTION="**$RENDER_URL** woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
+            DESCRIPTION="**$RENDER_URL** Woke up after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           else
             COLOR=15158332  # red
             TITLE="⛔ Failed to wake Render"
-            DESCRIPTION="**$RENDER_URL** timed out after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
+            DESCRIPTION="**$RENDER_URL** Timed out after ${ELAPSED} seconds (HTTP $HTTP_STATUS)."
           fi
 
           PAYLOAD=$(printf '{
