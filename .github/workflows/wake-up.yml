@@ -38,7 +38,7 @@ jobs:
             # Markers: Unsplash image URL · black background · aspect-ratio · hero class ·
             #          object-fit: cover · specific photo ID
             if grep -qE \
-              'unsplaash\.com' \
+              'unsplash\.com' \
               /tmp/render_response.html 2>/dev/null; then
               CONTENT_MATCH=true
               echo "Content check: ✅ PASSED — expected page markers found"
