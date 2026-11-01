@@ -38,7 +38,7 @@ jobs:
             # Markers: Unsplash image URL · black background · aspect-ratio · hero class ·
             #          object-fit: cover · specific photo ID
             if grep -qE \
-              'unsplash\.com|#000000|1920[[:space:]]*/[[:space:]]*1080|class="hero"|object-fit:[[:space:]]*cover|photo-1506905925346' \
+              'unsplaash\.com' \
               /tmp/render_response.html 2>/dev/null; then
               CONTENT_MATCH=true
               echo "Content check: ✅ PASSED — expected page markers found"
