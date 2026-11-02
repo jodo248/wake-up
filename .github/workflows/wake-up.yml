@@ -39,7 +39,7 @@ jobs:
             # Send 1st-fail Discord notification (notification #1 of 2)
             RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             P1_TITLE="🔄 Attempt #1 Failed — Retrying"
-            P1_DESC="**$RENDER_URL** **HTTP** **$HTTP_STATUS** after **${ELAPSED}** seconds in #1 Attempt."
+            P1_DESC="**$RENDER_URL** **HTTP** **$HTTP_STATUS** in Attempt #1 after **${ELAPSED}** seconds."
             P1_COLOR=16753920  # orange
 
             PAYLOAD1=$(printf '{
