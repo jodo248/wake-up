@@ -15,6 +15,7 @@ jobs:
         id: wake
         env:
           RENDER_URL: ${{ secrets.RENDER_URL }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           echo "Connecting to: $RENDER_URL"
           echo "Holding connection open — Render will respond once the container is ready (max. 240 seconds)..."
@@ -30,8 +31,50 @@ jobs:
           END=$(date +%s)
           ELAPSED=$(( END - START ))
 
-          echo "HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
+          echo "1st attempt — HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
 
+          # ── 2nd attempt (only when 1st was not 200) ─────────────────────────
+          if [ "$HTTP_STATUS" != "200" ]; then
+
+            # Send 1st-fail Discord notification (notification #1 of 2)
+            RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            P1_TITLE="🔄 1st attempt failed — retrying"
+            P1_DESC="**$RENDER_URL** returned HTTP $HTTP_STATUS after ${ELAPSED}s. Waiting 5 s, then re-trying (max. 30 s)..."
+            P1_COLOR=16753920  # orange
+
+            PAYLOAD1=$(printf '{
+              "embeds": [{
+                "title": "%s",
+                "description": "%s",
+                "color": %s,
+                "fields": [
+                  {"name": "Triggered by", "value": "Cron-Job.org", "inline": true},
+                  {"name": "Workflow run", "value": "[View logs](%s)", "inline": true}
+                ],
+                "footer": {"text": "Wake-Up · GitHub Actions"}
+              }]
+            }' "$P1_TITLE" "$P1_DESC" "$P1_COLOR" "$RUN_URL")
+
+            DISC1=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD1" \
+              "$DISCORD_WEBHOOK")
+            echo "Discord (1st-fail) webhook response: $DISC1"
+
+            echo "Waiting 5 seconds before 2nd attempt (max. 30 seconds)..."
+            sleep 5
+
+            START2=$(date +%s)
+            HTTP_STATUS=$(curl -o /tmp/render_response.html -s -w "%{http_code}" \
+              --max-time 30 \
+              "$RENDER_URL" || echo "000")
+            END2=$(date +%s)
+            ELAPSED=$(( END2 - START2 ))
+
+            echo "2nd attempt — HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
+          fi
+
+          # ── Content check (runs on whichever attempt's response is in the file) ──
           CONTENT_MATCH=false
           if [ "$HTTP_STATUS" = "200" ]; then
             # Check response body for expected page markers (any one match is enough).
