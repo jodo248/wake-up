@@ -18,20 +18,20 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           echo "Connecting to: $RENDER_URL"
-          echo "Holding connection open — Render will respond once the container is ready (max. 240 seconds)..."
+          echo "Holding connection open — Render will respond once the container is ready (max. 150 seconds)..."
 
           START=$(date +%s)
 
           # Single persistent request; Render holds it open while spinning up,
           # then responds with 200 once your app is listening — just like a browser.
           HTTP_STATUS=$(curl -o /tmp/render_response.html -s -w "%{http_code}" \
-            --max-time 240 \
+            --max-time 150 \
             "$RENDER_URL" || echo "000")
 
           END=$(date +%s)
           ELAPSED=$(( END - START ))
 
-          echo "1st attempt — HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
+          echo "1st attempt — HTTP status: $HTTP_STATUS (after ${ELAPSED} seconds)"
 
           # ── 2nd attempt (only when 1st was not 200) ─────────────────────────
           if [ "$HTTP_STATUS" != "200" ]; then
@@ -39,7 +39,7 @@ jobs:
             # Send 1st-fail Discord notification (notification #1 of 2)
             RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             P1_TITLE="🔄 Attempt #1 Failed — Retrying"
-            P1_DESC="**$RENDER_URL** **HTTP** **$HTTP_STATUS** in Attempt #1 after **${ELAPSED}** seconds."
+            P1_DESC="**$RENDER_URL** Attempt #1 **failed** after **${ELAPSED}** seconds (**HTTP** **$HTTP_STATUS**)."
             P1_COLOR=16753920  # orange
 
             PAYLOAD1=$(printf '{
@@ -61,8 +61,8 @@ jobs:
               "$DISCORD_WEBHOOK")
             echo "Discord (1st-fail) webhook response: $DISC1"
 
-            echo "Waiting 5 seconds before 2nd attempt (max. 30 seconds)..."
-            sleep 5
+            echo "Waiting 10 seconds before 2nd attempt (max. 30 seconds)..."
+            sleep 10
 
             START2=$(date +%s)
             HTTP_STATUS=$(curl -o /tmp/render_response.html -s -w "%{http_code}" \
@@ -71,7 +71,7 @@ jobs:
             END2=$(date +%s)
             ELAPSED=$(( END2 - START2 ))
 
-            echo "2nd attempt — HTTP status: $HTTP_STATUS  (after ${ELAPSED}s)"
+            echo "2nd attempt — HTTP status: $HTTP_STATUS (after ${ELAPSED} seconds)"
           fi
 
           # ── Content check (runs on whichever attempt's response is in the file) ──
@@ -120,7 +120,7 @@ jobs:
             DESCRIPTION="**$RENDER_URL** Woke up after **${ELAPSED}** seconds (HTTP $HTTP_STATUS)."
           elif [ "$HTTP_STATUS" = "200" ] && [ "$CONTENT_MATCH" = "false" ]; then
             COLOR=16776960  # yellow
-            TITLE="⚠️ HTML mismatch"
+            TITLE="⚠️ HTML Mismatch"
             DESCRIPTION="**$RENDER_URL** Woke up after **${ELAPSED}** seconds but wrong HTML (HTTP $HTTP_STATUS)."
           else
             COLOR=15158332  # red
